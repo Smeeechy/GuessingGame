@@ -1,6 +1,6 @@
 package animals;
 
-public class Fact {
+public class Fact extends Node {
     private final String VERB;
     private final String OTHER;
 
