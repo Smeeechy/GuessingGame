@@ -6,7 +6,8 @@ import java.util.Random;
 import java.util.Scanner;
 
 public class TwentyQuestions {
-    private final Scanner SCANNER = new Scanner(System.in);
+    private static final Scanner SCANNER = new Scanner(System.in);
+    private NodeIdGenerator nodeIdGenerator;
     private Node root;
 
     private final List<String> YES_WORDS = List.of("Y", "YES", "YEAH", "YEP", "SURE", "RIGHT", "AFFIRMATIVE",
@@ -14,25 +15,44 @@ public class TwentyQuestions {
     private final List<String> NO_WORDS = List.of("N", "NO", "NO WAY", "NAH", "NOPE", "NEGATIVE",
             "I DON'T THINK SO", "YEAH NO");
 
-    public TwentyQuestions() {
+    public TwentyQuestions(NodeIdGenerator nodeIdGenerator) {
+        this.nodeIdGenerator = nodeIdGenerator;
         greet();
-        startup();
+        this.root = startupWithUserInput();
         mainLoop();
         farewell();
     }
 
-    private void startup() {
+    public TwentyQuestions(NodeIdGenerator nodeIdGenerator, Node root) {
+        this.nodeIdGenerator = nodeIdGenerator;
+        greet();
+        this.root = root;
+        startupWithoutUserInput();
+        mainLoop();
+        farewell();
+    }
+
+    public Node getRoot() {
+        return this.root;
+    }
+
+    private Node startupWithUserInput() {
         System.out.println("I want to learn about animals. \nWhich animal do you like most?");
-        root = getAnimalFromUser();
+        Node animal = getAnimalFromUser();
         System.out.println("Wonderful! I've learned so much about animals!\n" +
                 "Let's play a game!");
+        return animal;
+    }
+
+    private void startupWithoutUserInput() {
+        System.out.println("I know a lot about animals.\nLet's play a game!");
     }
 
     private void mainLoop() {
         boolean running = true;
         while (running) {
             explainRulesAndConfirm();
-            evaluateFromNode(root);
+            evaluateFromNode(null, root);
             System.out.println("Do you want to play again?");
             running = validateFromUser();
         }
@@ -44,35 +64,33 @@ public class TwentyQuestions {
         SCANNER.nextLine();
     }
 
-    private void evaluateFromNode(Node node) {
-        if (node instanceof Animal) {
-            if (!guess((Animal) node)) {
+    private void evaluateFromNode(Node parent, Node currentNode) {
+        if (currentNode.isAnimal()) {
+            if (!guess(currentNode)) {
                 // guess was wrong, need to add a fact in place of this animal and the correct one
-                learn(node);
+                learn(parent, currentNode);
                 System.out.println("Nice! I've learned so much about animals!");
             } else {
                 System.out.println("I win");
             }
-        } else if (node instanceof Fact) {
-            System.out.println(((Fact) node).asQuestion());
+        } else if (currentNode.isFact()) {
+            System.out.println((currentNode).asQuestion());
             if (validateFromUser()) {
-                evaluateFromNode(node.getRight());
+                evaluateFromNode(currentNode, currentNode.getRight());
             } else {
-                evaluateFromNode(node.getLeft());
+                evaluateFromNode(currentNode, currentNode.getLeft());
             }
         }
     }
 
-    private void learn(Node node) {
-        Node parent = node.getParent();
+    private void learn(Node parent, Node currentNode) {
         System.out.println("I give up. What animal do you have in mind?");
-        Animal actual = getAnimalFromUser();
-        Fact fact = learnDifference((Animal) node, actual);
-        if (root == node) {
+        Node actual = getAnimalFromUser();
+        Node fact = learnDifference(currentNode, actual);
+        if (root == currentNode) {
             root = fact;
         } else {
-            fact.setParent(parent);
-            if (parent.getRight() == node) {
+            if (parent.getRight() == currentNode) {
                 parent.setRight(fact);
             } else {
                 parent.setLeft(fact);
@@ -80,28 +98,24 @@ public class TwentyQuestions {
         }
     }
 
-    private boolean guess(Animal animal) {
+    private boolean guess(Node animal) {
         System.out.println("Is it " + animal.toStringIndefinite() + "?");
         return validateFromUser();
     }
 
-    private Fact learnDifference(Animal firstAnimal, Animal secondAnimal) {
-        Fact fact = getFactFromUser(firstAnimal, secondAnimal);
+    private Node learnDifference(Node firstAnimal, Node secondAnimal) {
+        Node fact = getFactFromUser(firstAnimal, secondAnimal);
         System.out.println("Is it correct for " + secondAnimal.toStringIndefinite() + "?");
         boolean trueForSecondAnimal = validateFromUser();
         System.out.println("I learned the following facts about animals:");
         if (trueForSecondAnimal) {
             fact.setLeft(firstAnimal);
-            firstAnimal.setParent(fact);
             fact.setRight(secondAnimal);
-            secondAnimal.setParent(fact);
             System.out.println("T" + firstAnimal.toStringDefinite().substring(1) + " " + fact.negate() + ".");
             System.out.println("T" + secondAnimal.toStringDefinite().substring(1) + " " + fact + ".");
         } else {
             fact.setLeft(secondAnimal);
-            secondAnimal.setParent(fact);
             fact.setRight(firstAnimal);
-            firstAnimal.setParent(fact);
             System.out.println("T" + firstAnimal.toStringDefinite().substring(1) + " " + fact + ".");
             System.out.println("T" + secondAnimal.toStringDefinite().substring(1) + " " + fact.negate() + ".");
         }
@@ -110,7 +124,7 @@ public class TwentyQuestions {
         return fact;
     }
 
-    private void askForFact(Animal firstAnimal, Animal secondAnimal) {
+    private void askForFact(Node firstAnimal, Node secondAnimal) {
         System.out.println("Specify a fact that distinguishes " +
                 firstAnimal.toStringIndefinite() +
                 " from " +
@@ -118,7 +132,7 @@ public class TwentyQuestions {
         System.out.println("The sentence should be of the format: 'It can/has/is ...'.");
     }
 
-    private Fact getFactFromUser(Animal firstAnimal, Animal secondAnimal) {
+    private Node getFactFromUser(Node firstAnimal, Node secondAnimal) {
         String input;
         boolean valid = false;
         do {
@@ -128,11 +142,11 @@ public class TwentyQuestions {
                 valid = true;
             } else {
                 System.out.println("The examples of a statement:\n" +
-                        " - It can fly\n - It has horn\n - It is a mammal");
+                        " - It can fly\n - It has a horn\n - It is a mammal");
             }
         } while (!valid);
         String[] splitInput = input.toLowerCase().split("\\s+", 3);
-        return new Fact(splitInput[1], splitInput[2]);
+        return new Node(this.nodeIdGenerator.getNextId(), splitInput[1], splitInput[2]);
     }
 
     private void farewell() {
@@ -180,7 +194,7 @@ public class TwentyQuestions {
     }
 
     // getting input from user
-    private Animal getAnimalFromUser() {
+    private Node getAnimalFromUser() {
         String input = SCANNER.nextLine().trim().toLowerCase();
         String article, noun;
         if (input.matches("^(a|an)\\s.*")) {
@@ -201,6 +215,6 @@ public class TwentyQuestions {
             }
             noun = input;
         }
-        return new Animal(article, noun);
+        return new Node(this.nodeIdGenerator.getNextId(), article, noun);
     }
 }
