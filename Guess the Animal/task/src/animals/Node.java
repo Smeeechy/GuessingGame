@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.*;
 
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
-        property = "id")
+        property = "id",
+        scope = Node.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Node {
     private int id;

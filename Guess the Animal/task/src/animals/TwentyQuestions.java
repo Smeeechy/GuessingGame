@@ -15,18 +15,27 @@ public class TwentyQuestions {
     private final List<String> NO_WORDS = List.of("N", "NO", "NO WAY", "NAH", "NOPE", "NEGATIVE",
             "I DON'T THINK SO", "YEAH NO");
 
-    public TwentyQuestions(NodeIdGenerator nodeIdGenerator) {
-        this.nodeIdGenerator = nodeIdGenerator;
+    public TwentyQuestions(Node root) {
+        this.root = root;
+    }
+
+    public void start() {
+        if (this.root == null) {
+            startWithoutRoot();
+        } else {
+            startWithRoot();
+        }
+    }
+
+    private void startWithoutRoot() {
         greet();
         this.root = startupWithUserInput();
         mainLoop();
         farewell();
     }
 
-    public TwentyQuestions(NodeIdGenerator nodeIdGenerator, Node root) {
-        this.nodeIdGenerator = nodeIdGenerator;
+    private void startWithRoot() {
         greet();
-        this.root = root;
         startupWithoutUserInput();
         mainLoop();
         farewell();
@@ -105,7 +114,7 @@ public class TwentyQuestions {
 
     private Node learnDifference(Node firstAnimal, Node secondAnimal) {
         Node fact = getFactFromUser(firstAnimal, secondAnimal);
-        System.out.println("Is it correct for " + secondAnimal.toStringIndefinite() + "?");
+        System.out.println("Is the statement correct for " + secondAnimal.toStringIndefinite() + "?");
         boolean trueForSecondAnimal = validateFromUser();
         System.out.println("I learned the following facts about animals:");
         if (trueForSecondAnimal) {
@@ -157,7 +166,6 @@ public class TwentyQuestions {
         }
     }
 
-    // getting a 'yes'- or 'no'-adjacent response from the user
     private boolean validateFromUser() {
         boolean correct;
         while (true) {
@@ -193,7 +201,6 @@ public class TwentyQuestions {
         }
     }
 
-    // getting input from user
     private Node getAnimalFromUser() {
         String input = SCANNER.nextLine().trim().toLowerCase();
         String article, noun;
@@ -216,5 +223,24 @@ public class TwentyQuestions {
             noun = input;
         }
         return new Node(this.nodeIdGenerator.getNextId(), article, noun);
+    }
+
+    public void setNodeIdGenerator(NodeIdGenerator nodeIdGenerator) {
+        this.nodeIdGenerator = nodeIdGenerator;
+    }
+
+    public int getNodeCount() {
+        return getNodeCount(root);
+    }
+
+    private int getNodeCount(Node node) {
+        int sum = 1;
+        if (node.hasLeft()) {
+            sum += getNodeCount(node.getLeft());
+        }
+        if (node.hasRight()) {
+            sum += getNodeCount(node.getRight());
+        }
+        return sum;
     }
 }

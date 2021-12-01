@@ -1,10 +1,9 @@
 package animals;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.File;
@@ -13,23 +12,22 @@ import java.io.IOException;
 public class Main {
     public static void main(String[] args) {
         Node root = loadTree(args);
-        NodeIdGenerator generator;
         TwentyQuestions game;
         if (root == null) {
-            generator = new NodeIdGenerator(1);
-            game = new TwentyQuestions(generator);
+            game = new TwentyQuestions(null);
+            game.setNodeIdGenerator(new NodeIdGenerator(1));
         } else {
-            generator = loadIdGenerator();
-            game = new TwentyQuestions(generator, root);
+            game = new TwentyQuestions(root);
+            game.setNodeIdGenerator(new NodeIdGenerator(game.getNodeCount()));
         }
-        saveIdGenerator(generator);
+        game.start();
         saveTree(args, game.getRoot());
     }
 
     private static void saveTree(String[] args, Node root) {
         ObjectMapper mapper = getObjectMapper(args);
-        File file = getFile(args);
-        if (file != null && !file.exists()) {
+        File file = getTreeFile(args);
+        if (!file.exists()) {
             try {
                 file.createNewFile();
             } catch (IOException ioException) {
@@ -46,76 +44,48 @@ public class Main {
 
     private static Node loadTree(String[] args) {
         ObjectMapper mapper = getObjectMapper(args);
-        File file = getFile(args);
-        if (file != null && !file.exists()) {
+        File file = getTreeFile(args);
+        try {
+            return mapper.readValue(file, Node.class);
+        } catch (IOException ioException) {
+            System.out.println(ioException.getMessage());
             return null;
-        } else {
-            try {
-                return mapper.readValue(file, Node.class);
-            } catch (JsonParseException parseException) {
-                System.out.println(parseException.getMessage());
-            } catch (JsonMappingException mappingException) {
-                System.out.println(mappingException.getMessage());
-            } catch (IOException ioException) {
-                System.out.println(ioException.getMessage());
-            }
         }
-        return null;
-    }
-
-    private static void saveIdGenerator(NodeIdGenerator nodeIdGenerator) {
-        ObjectMapper mapper = new JsonMapper();
-        try {
-            mapper.writerWithDefaultPrettyPrinter().writeValue(new File("id_generator.json"), nodeIdGenerator);
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-    }
-
-    private static NodeIdGenerator loadIdGenerator() {
-        NodeIdGenerator nodeIdGenerator = null;
-        ObjectMapper mapper = new JsonMapper();
-        try {
-            nodeIdGenerator = mapper.readValue(new File("id_generator.json"), NodeIdGenerator.class);
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-        return nodeIdGenerator;
     }
 
     private static ObjectMapper getObjectMapper(String[] args) {
-        ObjectMapper mapper = null;
+        ObjectMapper mapper;
         if (args.length == 2 && args[0].equals("-type")) {
             switch (args[1]) {
-                case "json":
-                    mapper = new JsonMapper();
-                    break;
                 case "xml":
                     mapper = new XmlMapper();
                     break;
-                case "yaml":
-                    mapper = new YAMLMapper();
-                    break;
+             /* maybe jackson's yamlmapper is busted? it breaks everything.
+                serializes just fine, but refuses to deserialize properly */
+//                case "yaml":
+//                    mapper = new YAMLMapper();
+//                    break;
                 default:
+                    mapper = new JsonMapper();
                     break;
             }
+        } else {
+            mapper = new JsonMapper();
         }
         return mapper;
     }
 
-    private static File getFile(String[] args) {
+    private static File getTreeFile(String[] args) {
         if (args.length == 2 && args[0].equals("-type")) {
             switch (args[1]) {
-                case "json":
-                    return new File("animals.json");
                 case "xml":
                     return new File("animals.xml");
                 case "yaml":
                     return new File("animals.yaml");
                 default:
-                    break;
+                    return new File("animals.json");
             }
         }
-        return null;
+        return new File("animals.json");
     }
 }
