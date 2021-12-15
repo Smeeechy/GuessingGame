@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.*;
         property = "id",
         scope = Node.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Node {
+public class Node implements Comparable {
     private int id;
     private String data1;
     private String data2;
@@ -76,23 +76,27 @@ public class Node {
         return this.data1.matches(articleRegex);
     }
 
-    public String negate() {
+    public String[] toStringArray() {
+        return new String[]{ this.data1, this.data2 };
+    }
+
+    public String[] toNegatedStringArray() {
         if (this.isAnimal()) {
             return null;
         } else {
             switch (this.data1) {
                 case "can":
-                    return "can't " + this.data2;
+                    return new String[]{"can't", this.data2};
                 case "can't":
-                    return "can " + this.data2;
+                    return new String[]{"can", this.data2};
                 case "has":
-                    return "doesn't have " + this.data2;
+                    return new String[]{"doesn't have", this.data2};
                 case "doesn't have":
-                    return "has " + this.data2;
+                    return new String[]{"has", this.data2};
                 case "is":
-                    return "isn't " + this.data2;
+                    return new String[]{"isn't", this.data2};
                 case "isn't":
-                    return "is " + this.data2;
+                    return new String[]{"is", this.data2};
                 default:
                     return null;
             }
@@ -119,6 +123,10 @@ public class Node {
         }
     }
 
+    public String asStatement() {
+        return "It " + this.data1 + " " + this.data2 + ".";
+    }
+
     public String toStringDefinite() {
         if (this.isAnimal()) {
             return "the " + this.data2;
@@ -142,5 +150,31 @@ public class Node {
     @Override
     public String toString() {
         return this.data1 + " " + this.data2;
+    }
+
+    @JsonIgnore
+    @Override
+    public int compareTo(Object o) {
+        if (o instanceof Node) {
+            return this.data2.compareTo(((Node) o).getData2());
+        } else {
+            return Integer.MIN_VALUE;
+        }
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Node) {
+            return this.data1.equals(((Node) o).getData1()) && this.data2.equals(((Node) o).getData2());
+        } else {
+            return false;
+        }
+    }
+
+    @JsonIgnore
+    @Override
+    public int hashCode() {
+        return this.data1.hashCode() * 3 + this.data2.hashCode() * 5;
     }
 }
